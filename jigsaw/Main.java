@@ -6,6 +6,7 @@ import javafx.event.EventHandler;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.*;
 import javafx.geometry.Insets;
+import javafx.scene.Cursor;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -16,33 +17,38 @@ import javafx.scene.image.ImageView;
 import javafx.scene.input.InputEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
-import javafx.scene.layout.GridPane;
-import javafx.scene.layout.VBox;
+import javafx.scene.layout.*;
+import javafx.scene.paint.Color;
 import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
+import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.util.Duration;
 
 import javax.imageio.ImageIO;
 
-import javafx.scene.layout.HBox;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
 import java.util.List;
 
+import static javafx.stage.Screen.getPrimary;
+
 public class Main extends Application {
 
-    final int N = 5  ;   // 几阶,起码2阶
-    int Width  = 30;    // 一个方块的宽
-    int Height = 30;   // 一个方块的高
-    double gap = 1;        // 方块间隔
+    int N = 3  ;   // 几阶,起码2阶
+    double Width  = 70;    // 一个方块的宽,最小30
+    double Height = Width;   // 一个方块的高
+    double Gap = 1;        // 方块间隔
     int[] emp =new int[2];  // 空白格位置，默认随机
 
+
     Image image = new Image("file:img\\save.jpg");  // 图片地址
-    ImageView[] imgs = new ImageView[N*N]; // 初始化 图片数组
+    ImageView[] imgs ; // 初始化 图片数组
+
+    Pane rootbox = new Pane();
     GridPane root = new GridPane();
 
     LoadButton lb = new LoadButton();   // 加载按钮
@@ -50,82 +56,139 @@ public class Main extends Application {
     boolean mov;        // 是否可移动
     boolean issc;       // 成功与否
 
+    // 图像居中坐标
+    double parentX;
+    double parentY;
+
     @Override
     public void start(Stage primaryStage) {
         root.setStyle("-fx-background:transparent;");
         root.setAlignment(Pos.CENTER);
-//        root.setPadding(new Insets(20, 20, 20, 20));
 
-        clipPic();  // 剪切图片
-        loadPic();  // 加载图片
-//
-          lb.leave(primaryStage); // 加载按钮
-        lb.replay();
-        lb.show();
+        rootbox.setStyle("-fx-background:transparent;");
 
-
-//        VBox rootset = new VBox();
-//        InputEvent inputevent = neWWw InputEvent("text");
-
-
+        toStartShow(primaryStage);
 
         // 舞台，场景
-        Scene scene = new Scene(root);
+
+
+        Scene scene = new Scene(rootbox);
         scene.setFill(null);    // Set scene transparent.
         primaryStage.initStyle(StageStyle.TRANSPARENT);
         primaryStage.setTitle("Hello World");
         primaryStage.setScene(scene);
         primaryStage.show();
+        primaryStage.setAlwaysOnTop(true);
+        primaryStage.setMaximized(true);
 
+        // 初始位置
+        parentX=(Screen.getPrimary().getVisualBounds().getMaxX()-Width*N)/2;
+        parentY=(Screen.getPrimary().getVisualBounds().getMaxY()-Width*N)/2;
+        primaryStage.setX(parentX);
+        primaryStage.setY(parentY);
+
+        // 鼠标拖动
         DragListener listener = new DragListener(primaryStage);
         listener.enableDrag(root);
+    }
+
+    // 游戏开始
+    public void toStartShow(Stage primaryStage){
+        root.getChildren().removeAll(root.getChildren());
+        rootbox.getChildren().removeAll(root);
+        rootbox.getChildren().add(root);
+
+//        root.setPadding(new Insets(20, 20, 20, 20));
+        clipPic();  // 剪切图片
+        loadPic();  // 加载图片
+
+        lb.leave(primaryStage); // 加载按钮
+
+        lb.setPicNum(primaryStage);
+        lb.replay();
+        lb.show();
+        lb.setGapAndPicSize();
     }
 
 
     // 按钮类
     public class LoadButton{
 
-        HBox hbl = new HBox();
+        VBox vb = new VBox();
         Button leave = new Button("X");
 
         HBox hb = new HBox();
         Button replay = new Button("R");
-        Button set = new Button("S");
+        Button showOriginalPic = new Button("S");
+        Button setSlider = new Button("T");
+        Button setPicNum = new Button("N");
+
+        GridPane rootshow = new GridPane();    // showPane
+        GridPane rootslider = new GridPane();    // showPane
+        HBox rootpicnum = new HBox();    // showPane
+
+        Text num = new Text(String.valueOf(N));  // 图片数目
+
+        boolean nslider = true; // 判断是否 打开slider
+        boolean showoripic = true; // 判断是否 打开slider
+        boolean showpicnum = true; // 判断是否 打开num slider
+
 
         LoadButton(){
-            // leave 按钮
-            hbl.setPadding(new Insets(5, 5, 5, 5));
-            hbl.setAlignment(Pos.BOTTOM_CENTER);
+            // 垂直按钮
+            vb.setPadding(new Insets(5, 5, 5, 5));
+            vb.setSpacing(12);  // 按钮之间间隔
+            vb.setAlignment(Pos.BOTTOM_CENTER);
 
             // 水平按钮
             hb.setPadding(new Insets(5, 5, 5, 0));
-            hb.setSpacing(12);  // 按钮之间间隔
+            hb.setSpacing(12);
             hb.setAlignment(Pos.CENTER_RIGHT);
-
-
         }
 
         public void leave(Stage primaryStage){  // leave 按钮
             setButtonStyle(leave);
-            leave.setOnAction(event-> primaryStage.close());
+            leave.setOnAction(event-> {
+                primaryStage.close();
+                System.out.println("leave");
+            });
 
             // 添加按钮进去
-            hbl.getChildren().add(leave);
-            toVRoot(hbl);
+            vb.getChildren().removeAll(leave);
+            vb.getChildren().add(leave);
+            toVRoot(vb);
         }
 
 
         public void show(){                     // 显示原图按钮
             ImageView simg = new ImageView(image);
-            simg.setFitHeight(Height*N);
-            simg.setFitWidth(Width*N);
-            GridPane rootc = new GridPane();    // 原图
-            rootc.add(simg,0,0);
-            setButtonStyle(set);
-            set.setOnAction(event-> {
-                if(!issc) showPic(simg,rootc);
+            rootshow.add(simg,0,0);
+
+            setButtonStyle(showOriginalPic);
+            showOriginalPic.setOnAction(event-> {
+                if(showoripic){
+                    showoripic = false;
+                    simg.setFitHeight((Height+Gap)*N-Gap);
+                    simg.setFitWidth((Width+Gap)*N-Gap);
+                    setRootGap(0);
+                    // remove setGapAndPicSize
+                    rootslider.getChildren().removeAll(rootslider.getChildren());
+                    nslider = true;
+
+                    root.add(rootshow,0,0,N,N);
+                    replay.setDisable(true);
+                    setSlider.setDisable(true);
+                }else {
+                    setRootGap(Gap);
+                    showoripic = true;
+                    root.getChildren().removeAll(rootshow);
+                    replay.setDisable(false);
+                    setSlider.setDisable(false);
+                }
+
             });
-            hb.getChildren().add(set);
+            hb.getChildren().removeAll(showOriginalPic);
+            hb.getChildren().add(showOriginalPic);
             toHRoot(hb);
         }
 
@@ -133,19 +196,136 @@ public class Main extends Application {
             setButtonStyle(replay);
             replay.setOnAction(event-> loadPic());
 
+            hb.getChildren().removeAll(replay);
             hb.getChildren().add(replay);
             toHRoot(hb);
-
         }
 
-        public void toVRoot(HBox hbox){
-            root.getChildren().removeAll(hbox);
-            root.add(hbox,N,0,1,N);
+        public void setGapAndPicSize(){                   // Slider 按钮
+
+            Slider gapslider = new Slider(0,10,Gap);
+            gapslider.setStyle("-fx-font-size:10;" +
+                    "-fx-control-inner-background: #6af78d;");
+
+            gapslider.valueProperty().addListener(ov->{
+                Gap = gapslider.getValue();
+                root.setVgap(Gap);
+                root.setHgap(Gap);
+            });
+
+            Slider picSizeslider = new Slider(40,200,Width);
+            picSizeslider.setStyle("-fx-font-size:10;" +
+                    "-fx-control-inner-background: #8ef7a8;");
+
+            picSizeslider.valueProperty().addListener(ov->{
+                Width = picSizeslider.getValue();
+                Height = picSizeslider.getValue();
+
+                for (int i = 0; i < imgs.length; i++) {
+                    imgs[i].setFitWidth(Width);
+                    imgs[i].setFitHeight(Height);
+                }
+            });
+
+            rootslider.setStyle("-fx-background:#8ef7d9;");
+            rootslider.setVgap(5);
+            rootslider.setAlignment(Pos.CENTER);
+
+            setButtonStyle(setSlider);
+            setSlider.setOnAction(event-> {
+                if(nslider){
+                    rootbox.getChildren().removeAll(rootslider);
+
+                    rootslider.getChildren().removeAll(rootslider.getChildren());
+                    rootslider.add(gapslider,0,0);
+                    rootslider.add(picSizeslider,0,1);
+                    nslider = false;
+                    rootbox.getChildren().add(rootslider);
+                    rootslider.relocate((Width+Gap)*N+45,setSlider.getBoundsInParent().getMaxY()-30);
+                }else {
+                    nslider = true;
+                    rootbox.getChildren().removeAll(rootslider);
+                }
+            });
+
+            vb.getChildren().removeAll(setSlider);
+            vb.getChildren().add(setSlider);
+            toHRoot(hb);
         }
 
-        public void toHRoot(HBox hbox){
+        public void setPicNum(Stage primaryStage){
+            Slider setpicnum = new Slider(2,10,N);
+            setpicnum.setBlockIncrement(5);
+            setpicnum.setMinorTickCount(5);
+            setpicnum.setMajorTickUnit(5);
+
+
+            num.setStyle("-fx-background:red;");
+            rootpicnum.setSpacing(4);
+
+
+            setpicnum.valueProperty().addListener(ov->{
+                num.setText(String.valueOf((int)setpicnum.getValue()));
+                N = (int)setpicnum.getValue();
+            });
+
+            setButtonStyle(setPicNum);
+            setPicNum.setOnAction(event-> {
+                    if(showpicnum){
+                        showpicnum = false;
+
+                        // 滑条样式
+                        rootpicnum.setStyle("-fx-pref-width: "+(Width+Gap)*N/2);
+                        if((Width+Gap)*N/2 < 90){
+                            setpicnum.setOrientation(Orientation.VERTICAL);
+                        }else {
+                            setpicnum.setOrientation(Orientation.HORIZONTAL);
+                        }
+
+                        rootpicnum.getChildren().removeAll(setpicnum,num);
+                        rootpicnum.getChildren().addAll(setpicnum,num);
+                        rootpicnum.relocate(0,(Width+Gap)*N+10);
+                        rootbox.getChildren().removeAll(rootpicnum);
+                        rootbox.getChildren().add(rootpicnum);
+
+                        replay.setDisable(true);
+                        setSlider.setDisable(true);
+                        showOriginalPic.setDisable(true);
+                    }else {
+                        showpicnum = true;
+                        rootpicnum.getChildren().removeAll(setpicnum,num);
+                        rootbox.getChildren().removeAll(rootpicnum);
+                        if(showoripic){
+                            replay.setDisable(false);
+                            setSlider.setDisable(false);
+                        }
+                        if(mov) {
+                            showOriginalPic.setDisable(false);
+                        };
+
+                        // 重新
+                        toStartShow(primaryStage);
+                    }
+            });
+
+            // 添加按钮进去
+            hb.getChildren().removeAll(setPicNum);
+            hb.getChildren().add(setPicNum);
+            toHRoot(hb);
+        }
+
+        private void toVRoot(VBox vbox){
+            root.getChildren().removeAll(vbox);
+            root.add(vbox,N,0,1,N);
+        }
+
+        private void toHRoot(HBox hbox){
             root.getChildren().removeAll(hbox);
             root.add(hbox,0,N,N+1,1);
+        }
+
+        private void removeButton(HBox box, Button button){
+            box.getChildren().removeAll(button);
         }
 
         // 设置按钮样式
@@ -164,19 +344,6 @@ public class Main extends Application {
             });
         }
 
-        // 显示原图
-        private void showPic(ImageView simg,GridPane rootc){
-            if(mov){
-                mov = false;
-                setRootGap(0);  // 间距
-                root.add(rootc,0,0,N,N);
-            }else{
-                mov = true;
-                setRootGap(1);  // 间距
-                root.getChildren().removeAll(rootc);
-            }
-
-        }
     }
 
 
@@ -184,7 +351,7 @@ public class Main extends Application {
     public void loadPic(){
         mov = true;
         issc = false;
-        root.getChildren().clear(); // 清空网格
+        root.getChildren().removeAll(imgs); // 清空网格
 
         // 横向加入图片
         List<Integer> ns = rand();
@@ -199,14 +366,13 @@ public class Main extends Application {
 
         // 加载按钮
 //        root.setGridLinesVisible(true);
-        setRootGap(gap);
-
-
+        setRootGap(Gap);
+        lb.showOriginalPic.setDisable(false);
     }
 
     // 切割图
     public void clipPic(){
-
+        imgs = new ImageView[N*N];
         double eg = image.getWidth()/N;
 
         for(int i = 0, k = 0; i < N; ++i) {
@@ -256,7 +422,7 @@ public class Main extends Application {
 
                     setRootGap(0);
 
-
+                    lb.showOriginalPic.setDisable(true);
 
 //                    // 按钮淡出
 //                    FadeTransition ft = new FadeTransition(Duration.millis(1500), replay);
@@ -394,11 +560,12 @@ public class Main extends Application {
                     yOffset = event.getSceneY();
                 } else if (event.getEventType() == MouseEvent.MOUSE_DRAGGED) {
                     stage.setX(event.getScreenX() - xOffset);
-                    if(event.getScreenY() - yOffset < 0) {
-                        stage.setY(0);
-                    }else {
-                        stage.setY(event.getScreenY() - yOffset);
-                    }
+                    stage.setY(event.getScreenY() - yOffset);
+//                    if(event.getScreenY() - yOffset < 0) {
+//                        stage.setY(0);
+//                    }else {
+//                        stage.setY(event.getScreenY() - yOffset);
+//                    }
                 }
             }
         }
