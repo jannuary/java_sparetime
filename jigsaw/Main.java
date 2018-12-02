@@ -19,6 +19,7 @@ import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
 import javafx.stage.Screen;
@@ -134,6 +135,8 @@ public class Main extends Application {
 
         double cwidth = Width;      // setSlider 点击时图片的大小
         double cgap = Gap;          // setSlider 点击时间隔的大小
+
+        int pN = N;     // setPicNum 点击前阶数大小
 
         LoadButton(){
             // 垂直按钮
@@ -284,6 +287,8 @@ public class Main extends Application {
             setpicnum.setStyle("-fx-control-inner-background: #2ce0de");
             rootpicnum.setSpacing(4);
             rootpicnum.setStyle("-fx-background:transparent;");
+            num.setFont(Font.font(null, FontWeight.BOLD, 15));
+            num.setFill(Color.valueOf("#03a9f4"));
 
             setpicnum.valueProperty().addListener(ov->{
                 num.setText(String.valueOf((int)setpicnum.getValue()));
@@ -293,8 +298,9 @@ public class Main extends Application {
             setButtonStyle(setPicNum);
             setPicNum.setOnAction(event-> {
                     if(showpicnum){
+                        pN = N;
                         showpicnum = false;
-
+                        mov = false;
                             primaryStage.setHeight((Height+Gap)*N+60);
                             primaryStage.setWidth(primaryStage.getWidth()+60);
 
@@ -312,22 +318,30 @@ public class Main extends Application {
                         showOriginalPic.setDisable(true);
                     }else {
                         showpicnum = true;
+                        mov = true;
+                        nslider = true;
                         rootpicnum.getChildren().removeAll(setpicnum,num);
                         rootbox.getChildren().removeAll(rootpicnum);
                         replay.setDisable(false);
                         setSlider.setDisable(false);
                         showOriginalPic.setDisable(false);
 
-                        rootslider.getChildren().removeAll(rootslider.getChildren());
-                        rootshow.getChildren().removeAll(rootshow.getChildren());
-                        // 重新
-                         nslider = true;
-                         showoripic = true;
-                         mov = true;
-                        issc = false;
-                        toStartShow(primaryStage);
-                        primaryStage.setWidth((Width+Gap)*N+45);
-                        primaryStage.setHeight((Height+Gap)*N+45);
+                        if(pN != N){
+                            rootslider.getChildren().removeAll(rootslider.getChildren());
+                            rootshow.getChildren().removeAll(rootshow.getChildren());
+                            // 重新
+                            issc = false;
+
+                            toStartShow(primaryStage);
+                            primaryStage.setWidth((Width+Gap)*N+45);
+                            primaryStage.setHeight((Height+Gap)*N+45);
+
+                            if(primaryStage.getHeight() > Screen.getPrimary().getVisualBounds().getHeight()-200){
+                                primaryStage.setX((Screen.getPrimary().getVisualBounds().getWidth()-primaryStage.getWidth())/2);
+                                primaryStage.setY((Screen.getPrimary().getVisualBounds().getHeight()-primaryStage.getHeight())/2);
+
+                            }
+                        }
                     }
             });
 
